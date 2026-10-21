@@ -352,6 +352,28 @@ LEFT JOIN responses r ON v.vacancy_id = r.vacancy_id
 WHERE v.closed_at IS NULL
 GROUP BY v.professional_role;
 
+--ПРАВИЛЬНЫЙ ЗАПРОС 
+-- Исправленный запрос (с использованием CTE для предотвращения размножения строк):
+WITH responses_by_vacancy AS (
+    SELECT
+        vacancy_id,
+        COUNT(*) AS response_count
+    FROM responses
+    GROUP BY vacancy_id
+)
+SELECT
+    v.professional_role,
+    COUNT(*) AS vacancies,
+    -- Сумма теперь считается верно, так как строки не размножаются
+    SUM(v.salary_from) AS total_salary,
+    -- Более релевантная метрика
+    ROUND(AVG(v.salary_from)) AS avg_salary_from,
+    ROUND(1.0 * COALESCE(SUM(r.response_count), 0) / NULLIF(COUNT(*), 0), 1) AS responses_per_vacancy
+FROM vacancies v
+LEFT JOIN responses_by_vacancy r
+    ON v.vacancy_id = r.vacancy_id
+WHERE v.closed_at IS NULL
+GROUP BY v.professional_role;
 
 -- Какие два правила из лекции защитили бы от этих ошибок при написании запроса:
 -- 1. Правило работы с NULL: сравнение с NULL никогда не истина (здесь нужно, например, IS NULL).
